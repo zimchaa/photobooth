@@ -36,6 +36,7 @@ total_pics = 4 # number of pics to be taken
 capture_delay = 3 # delay between pics
 prep_delay = 4 # number of seconds at step 1 as users prep to have photo taken
 restart_delay = 3 # how long to display finished message before beginning a new session
+tweet_on = 1
 
 # full frame of v1 camera is 2592x1944. Wide screen max is 2592,1555
 # if you run into resource issues, try smaller, like 1920x1152. 
@@ -64,11 +65,16 @@ real_path = os.path.dirname(os.path.realpath(__file__))
 
 # initialise flotilla - rainbow on the second port - will error if this is not connected
 client = flotilla.Client(
-        requires={
-        	'one': flotilla.Touch,
-            'two': flotilla.Rainbow
-        }
-    )
+  requires={
+		'one': flotilla.Touch,
+		'two': flotilla.Rainbow
+  })
+
+while not dock.ready:
+    pass
+
+touch = dock.first(flotilla.Touch)
+rainbow = dock.first(flotilla.Rainbow)  
 
 # initialize pygame
 pygame.init()
@@ -198,22 +204,25 @@ def generate_single(jpg_group):
     print "Done with file processing!!!"
 
 # define the photo taking function for when the big button is pressed 
-def start_photobooth(pin): 
+def start_photobooth(total_pics, tweet_on): 
 
 	################################# Begin Step 1 #################################
 	
 	print "Get Ready!"
+	print("total_pics: " + total_pics)
+	print("tweet_on: " + tweet_on)
+	
 	# GPIO.output(led_pin,False);
-	if pin.name == "one":
+	#if pin.name == "one":
 		# red button pressed
-                explorerhat.output[0].pulse(1, 1, 1, 0)
-		print "red button pressed"
-		total_pics = 4
-	if pin.name == "three":
+        # explorerhat.output[0].pulse(1, 1, 1, 0)
+		#print "red button pressed"
+		#total_pics = 4
+	#if pin.name == "three":
 		# blue button pressed
-		explorerhat.output[1].pulse(1, 1, 1, 0)
-		print "blue button pressed"
-		total_pics = 1
+		# explorerhat.output[1].pulse(1, 1, 1, 0)
+		#print "blue button pressed"
+		#total_pics = 1
 
 	show_image(real_path + "/instructions.png")
 	sleep(prep_delay)
@@ -230,20 +239,22 @@ def start_photobooth(pin):
 	pixel_width = 0 # local variable declaration
 	pixel_height = 0 # local variable declaration
 	
-	if pin.name == "one":
+	# if pin.name == "one":
+	if total_pics == 4
 		# montage mode
+		print("montage mode!")
 		camera.resolution = (high_res_w, high_res_h) # set camera resolution to high res
 	
-	if pin.name == "three":
+	# if pin.name == "three":
+	if total_pics == 1
 		# single mode
+		print("single mode!")
 		camera.resolution = (single_res_w, single_res_h)	
 
 	camera.awb_mode = 'incandescent'
     	# Start off with ridiculously low gains
     	##rg, bg = (1.8, 1.2)
     	#camera.awb_gains = (rg, bg)
-		
-        rainbow = client.first(flotilla.Rainbow)
 
 	################################# Begin Step 2 #################################
 	
@@ -264,9 +275,9 @@ def start_photobooth(pin):
 				time.sleep(2) #warm up camera
 				#GPIO.output(led_pin,True) #turn on the LED
 				filename = config.file_path + now + '-0' + str(i) + '.jpg'
-                                rainbow.set_all(255,255,255).update() # camera flash
+                rainbow.set_all(255,255,255).update() # camera flash
 				camera.capture(filename)
-                                rainbow.set_all(0,0,0).update() # camera unflash
+                rainbow.set_all(0,0,0).update() # camera unflash
 				# print "Captured Picture!"
 				print(filename)
 				#GPIO.output(led_pin,False) #turn off the LED
@@ -290,13 +301,15 @@ def start_photobooth(pin):
 	# input(pygame.event.get()) # press escape to exit pygame. Then press ctrl-c to exit python.
 	
 	try:
-		if pin.name == "one":
+		# if pin.name == "one":
+		if total_pics == 4
 			print "printing montage"
 			# proc_gen_montage = Process(target = generate_montage, args = (now,))
      			# proc_gen_montage.start()
 			generate_montage(now)
 		       
-		if pin.name == "three":
+		# if pin.name == "three":
+		if total_pics == 1
 			print "printing single"
 			# proc_gen_single = Process(target = generate_single, args = (now,))
                         # proc_gen_single.start()
@@ -313,12 +326,12 @@ def start_photobooth(pin):
 	show_image(real_path + "/finished2.png")
 	
 	# turn off the blinking buttons
-	explorerhat.output[0].off()
-	explorerhat.output[1].off()
+	# explorerhat.output[0].off()
+	# explorerhat.output[1].off()
 
 	time.sleep(restart_delay)
 	show_image(real_path + "/intro.png");
-	#GPIO.output(led_pin,True) #turn on the LED
+	# GPIO.output(led_pin,True) #turn on the LED
 
 ####################
 ### Main Program ###
@@ -328,8 +341,23 @@ print "Photo booth app running..."
 
 show_image(real_path + "/intro.png");
 
-explorerhat.input.on_low(start_photobooth, 1000)
+# explorerhat.input.on_low(start_photobooth, 1000)
 # explorerhat.touch.pressed(start_photobooth)
 
-explorerhat.pause()
+try:
+    while True:
+        if touch.one:
+            print("1 tocuhed, do single photo with tweet")
+			      start_photobooth(1, 1)
+        if touch.two:
+            print("2 touched, do single photo without tweet")
+			      start_photobooth(1, 0)
+        if touch.three:
+			      print("3 touched, do 4 photo without tweet")
+			      start_photobooth(4, 0)
+        if touch.four:
+            print("4 touched, do 4 photo with tweet")
+			      start_photobooth(4, 1)
+
+# explorerhat.pause()
 
